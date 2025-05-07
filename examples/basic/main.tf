@@ -57,7 +57,7 @@ module "downloads" {
     }
   ]
 
-  # S3 Bucket configuration
+    # S3 Bucket configuration
   create_bucket      = var.create_bucket
   bucket_name        = var.bucket_name
   bucket_prefix      = var.bucket_prefix

@@ -1,9 +1,3 @@
-variable "region" {
-  description = "The AWS region to deploy resources"
-  type        = string
-  default     = "us-west-2"
-}
-
 variable "platform" {
   description = "Platform for which to download binaries (linux or darwin)"
   type        = string
