@@ -1,3 +1,6 @@
+# terraform, terragrunt, checkov, trivy, cosign
+# might need the nexus-iq agent, not sure yet
+ 
 locals {
   # Define a set of Morpheus binaries to be downloaded
   # Create a set of download configurations for each binary
