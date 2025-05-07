@@ -4,54 +4,7 @@
 locals {
   # Define a set of binaries to be downloaded
   # Create a set of download configurations for each binary
-  downloads = concat(
-    var.downloads,
-    [
-      {
-        name = "terraform",
-        url = "https://releases.hashicorp.com/terraform/${var.terraform_version}/terraform_${var.terraform_version}_${var.platform}_${var.arch}.zip",
-        path_prefix = "terraform",
-        output_path = "./downloads",
-        download = true
-      },
-      {
-        name = "terragrunt",
-        url = "https://github.com/gruntwork-io/terragrunt/releases/download/v${var.terragrunt_version}/terragrunt_${var.platform}_${var.arch}",
-        path_prefix = "terragrunt",
-        output_path = "./downloads",
-        download = true
-      },
-      {
-        name = "checkov",
-        url = "https://github.com/bridgecrewio/checkov/archive/refs/tags/${var.checkov_version}.zip",
-        path_prefix = "checkov",
-        output_path = "./downloads",
-        download = true
-      },
-      {
-        name = "trivy",
-        url = "https://github.com/aquasecurity/trivy/releases/download/v${var.trivy_version}/trivy_${var.trivy_version}_${var.platform}-${var.arch}.tar.gz",
-        path_prefix = "trivy",
-        output_path = "./downloads",
-        download = true
-      },
-      {
-        name = "cosign",
-        url = "https://github.com/sigstore/cosign/releases/download/v${var.cosign_version}/cosign-${var.platform}-${var.arch}",
-        path_prefix = "cosign",
-        output_path = "./downloads",
-        download = true
-      },
-      {
-        name = "nexus-iq-agent",
-        url = "https://download.sonatype.com/clm/iq-server/nexus-iq-cli-${var.nexus_iq_version}.jar",
-        path_prefix = "nexus-iq-agent",
-        output_path = "./downloads",
-        download = true
-      }
-    ]
-  )
-  
+
   # Local variable to reference the appropriate bucket ID based on whether we're creating or using an existing bucket
   s3_bucket = var.create_bucket ? aws_s3_bucket.downloads_bucket[0].id : data.aws_s3_bucket.existing_bucket[0].id
 }
@@ -64,7 +17,7 @@ data "aws_s3_bucket" "existing_bucket" {
 
 module "downloader" {
   # Iterate over each download configuration
-  for_each    = tomap({ for download in local.downloads : download.name => download if download.download })
+  for_each    = tomap({ for download in var.downloads : download.name => download if download.download })
   source      = "HappyPathway/downloader/url"
   url         = each.value.url
   output_path = "${each.value.output_path}/${each.key}"
@@ -73,12 +26,12 @@ module "downloader" {
 
 # Conditionally create an S3 bucket with best practices
 resource "aws_s3_bucket" "downloads_bucket" {
-  count         = var.create_bucket ? 1 : 0
-  
+  count = var.create_bucket ? 1 : 0
+
   # Use provided bucket name or generate one with prefix
   bucket        = var.bucket_name != null ? var.bucket_name : null
   bucket_prefix = var.bucket_name == null ? var.bucket_prefix : null
-  
+
   force_destroy = var.force_destroy
   tags          = var.tags
 }
@@ -99,7 +52,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "downloads_bucket"
 resource "aws_s3_bucket_versioning" "downloads_bucket" {
   count  = var.create_bucket && var.versioning_enabled ? 1 : 0
   bucket = aws_s3_bucket.downloads_bucket[0].id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -124,16 +77,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "downloads_bucket" {
   dynamic "rule" {
     for_each = var.lifecycle_rules
     content {
-      id      = try(rule.value.id, null)
-      status  = try(rule.value.status, "Enabled")
-      
+      id     = try(rule.value.id, null)
+      status = try(rule.value.status, "Enabled")
+
       dynamic "expiration" {
         for_each = try(rule.value.expiration, null) != null ? [rule.value.expiration] : []
         content {
           days = try(expiration.value.days, null)
         }
       }
-      
+
       dynamic "transition" {
         for_each = try(rule.value.transition, [])
         content {
@@ -147,8 +100,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "downloads_bucket" {
 
 # Upload the downloaded files to the S3 bucket (using local.s3_bucket)
 resource "aws_s3_object" "downloads" {
-  for_each   = tomap({ for download in local.downloads : download.name => download })
-  
+  for_each = tomap({ for download in local.downloads : download.name => download })
+
   bucket     = local.s3_bucket
   key        = "${each.value.path_prefix}/${each.key}"
   source     = "${each.value.output_path}/${each.key}"
