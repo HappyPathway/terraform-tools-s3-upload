@@ -1,10 +1,8 @@
 provider "aws" {
-  region = "us-west-2"
+  region = var.region
 }
 
 locals {
-  platform = "linux"
-  arch     = "amd64"
   versions = {
     terraform      = "1.0.0"
     terragrunt     = "0.35.0"
@@ -21,14 +19,14 @@ module "downloads" {
   downloads = [
     {
       name        = "terraform",
-      url         = "https://releases.hashicorp.com/terraform/${local.versions.terraform}/terraform_${local.versions.terraform}_${local.platform}_${local.arch}.zip",
+      url         = "https://releases.hashicorp.com/terraform/${local.versions.terraform}/terraform_${local.versions.terraform}_${var.platform}_${var.arch}.zip",
       path_prefix = "terraform",
       output_path = "./downloads",
       download    = true
     },
     {
       name        = "terragrunt",
-      url         = "https://github.com/gruntwork-io/terragrunt/releases/download/v${local.versions.terragrunt}/terragrunt_${local.platform}_${local.arch}",
+      url         = "https://github.com/gruntwork-io/terragrunt/releases/download/v${local.versions.terragrunt}/terragrunt_${var.platform}_${var.arch}",
       path_prefix = "terragrunt",
       output_path = "./downloads",
       download    = true
@@ -42,14 +40,14 @@ module "downloads" {
     },
     {
       name        = "trivy",
-      url         = "https://github.com/aquasecurity/trivy/releases/download/v${local.versions.trivy}/trivy_${local.versions.trivy}_${local.platform}-${local.arch}.tar.gz",
+      url         = "https://github.com/aquasecurity/trivy/releases/download/v${local.versions.trivy}/trivy_${local.versions.trivy}_${var.platform}-${var.arch}.tar.gz",
       path_prefix = "trivy",
       output_path = "./downloads",
       download    = true
     },
     {
       name        = "cosign",
-      url         = "https://github.com/sigstore/cosign/releases/download/v${local.versions.cosign}/cosign-${local.platform}-${local.arch}",
+      url         = "https://github.com/sigstore/cosign/releases/download/v${local.versions.cosign}/cosign-${var.platform}-${var.arch}",
       path_prefix = "cosign",
       output_path = "./downloads",
       download    = true
@@ -64,12 +62,12 @@ module "downloads" {
   ]
 
   # S3 Bucket configuration
-  create_bucket = true
-  bucket_name   = "example-downloads-bucket"
-  bucket_prefix = "downloads-example-"
-
-  tags = {
-    Environment = "example"
-    Project     = "DevOps-Tools"
-  }
+  create_bucket      = var.create_bucket
+  bucket_name        = var.bucket_name
+  bucket_prefix      = var.bucket_prefix
+  force_destroy      = var.force_destroy
+  encryption_enabled = var.encryption_enabled
+  versioning_enabled = var.versioning_enabled
+  lifecycle_rules    = var.lifecycle_rules
+  tags               = var.tags
 }
